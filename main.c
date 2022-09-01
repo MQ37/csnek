@@ -49,7 +49,7 @@ void print_game() {
       if (i == pi && j == pj)
         printw("G");
       else if (i == fi && j == fj)
-          printw("X");
+        printw("X");
       else if (is_tail)
         printw("-");
       else
@@ -83,8 +83,8 @@ int main(int argc, char *argv[]) {
 
   scrollok(stdscr, TRUE);
 
-    fi = rand() % HEIGHT;
-    fj = rand() % WIDTH;
+  fi = rand() % HEIGHT;
+  fj = rand() % WIDTH;
   while (1) {
     clear();
     refresh();

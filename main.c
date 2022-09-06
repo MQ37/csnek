@@ -6,7 +6,7 @@
 #define HEIGHT 20
 #define WIDTH 40
 #define AI 1
-#define FPS 30
+#define FPS 24
 
 // Velocity
 int vi = 0;
@@ -90,10 +90,12 @@ char step() {
         return -1;
     }
 
-    for (int i = 1; i < tail_len; i++) {
-        struct Position pos = tail[i];
-        if (pi == pos.i && pj == pos.j)
-            return -1;
+    if (!AI) {
+        for (int i = 1; i < tail_len; i++) {
+            struct Position pos = tail[i];
+            if (pi == pos.i && pj == pos.j)
+                return -1;
+        }
     }
 
     shift(tail, tail_len);
@@ -119,14 +121,14 @@ char step() {
 }
 
 void turn_up() {
-    if (vi > 0)
+    if (vi > 0 && !AI)
         return;
     vi = -1;
     vj = 0;
 }
 
 void turn_down() {
-    if (vi < 0)
+    if (vi < 0 && !AI)
         return;
     vi = 1;
     vj = 0;
@@ -134,14 +136,14 @@ void turn_down() {
 }
 
 void turn_left() {
-    if (vj > 0)
+    if (vj > 0 && !AI)
         return;
     vi = 0;
     vj = -1;
 }
 
 void turn_right() {
-    if (vj < 0)
+    if (vj < 0 && !AI)
         return;
     vi = 0;
     vj = 1;

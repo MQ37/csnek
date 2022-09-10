@@ -45,12 +45,19 @@ void shift_left(struct Position *array, int len) {
 }
 
 void gen_food() {
-    fi = 1 + (rand() % (HEIGHT-2));
-    fj = 1 + (rand() % (WIDTH-2));
-    while (fi == pi || fj == pj) {
+    char on_tail;
+    do {
+        on_tail = 0;
         fi = 1 + (rand() % (HEIGHT-2));
         fj = 1 + (rand() % (WIDTH-2));
-    }
+        for (int ti = 0; ti < tail_len; ti++) {
+            struct Position pos = tail[ti];
+            if (fi == pos.i && fj == pos.j) {
+                on_tail = 1;
+                break;
+            }
+        }
+    } while (fi == pi || fj == pj || on_tail);
 }
 
 void print_game() {
@@ -90,7 +97,8 @@ char step() {
         return -1;
     }
 
-    if (!AI) {
+    //if (!AI) {
+    if (1) {
         for (int i = 1; i < tail_len; i++) {
             struct Position pos = tail[i];
             if (pi == pos.i && pj == pos.j)
@@ -121,14 +129,16 @@ char step() {
 }
 
 void turn_up() {
-    if (vi > 0 && !AI)
+    //if (vi > 0 && !AI)
+    if (vi > 0)
         return;
     vi = -1;
     vj = 0;
 }
 
 void turn_down() {
-    if (vi < 0 && !AI)
+    //if (vi < 0 && !AI)
+    if (vi < 0)
         return;
     vi = 1;
     vj = 0;
@@ -136,14 +146,16 @@ void turn_down() {
 }
 
 void turn_left() {
-    if (vj > 0 && !AI)
+    //if (vj > 0 && !AI)
+    if (vj > 0)
         return;
     vi = 0;
     vj = -1;
 }
 
 void turn_right() {
-    if (vj < 0 && !AI)
+    //if (vj < 0 && !AI)
+    if (vj < 0)
         return;
     vi = 0;
     vj = 1;
@@ -203,29 +215,49 @@ void find_path(struct Position *path, int *len) {
         // get positions around
         for (int i = -1; i < 2; i+=2) {
             int j = 0;
-                if (ci+i > -1 && ci+i < HEIGHT) {
-                    int ai = ci+i;
-                    int aj = cj+j;
-                    if (!contains(to_visit, p_to_visit, to_pos(ai, aj)) && 
-                            !contains(visited, p_visited, to_pos(ai, aj))) {
-                        to_visit[p_to_visit++] = to_pos(ai, aj);
-                        map[ai*WIDTH*2 + aj*2 + 0] = ci;
-                        map[ai*WIDTH*2 + aj*2 + 1] = cj;
-                    }
+            int ai = ci+i;
+            int aj = cj+j;
+
+            char is_tail = 0;
+            for (int ti = 0; ti < tail_len; ti++) {
+                struct Position pos = tail[ti];
+                if (ai == pos.i && aj == pos.j) {
+                    is_tail = 1;
+                    break;
                 }
+            }
+
+            if (ai > -1 && ai < HEIGHT && !is_tail) {
+                if (!contains(to_visit, p_to_visit, to_pos(ai, aj)) && 
+                        !contains(visited, p_visited, to_pos(ai, aj))) {
+                    to_visit[p_to_visit++] = to_pos(ai, aj);
+                    map[ai*WIDTH*2 + aj*2 + 0] = ci;
+                    map[ai*WIDTH*2 + aj*2 + 1] = cj;
+                }
+            }
         }
         for (int j = -1; j < 2; j+=2) {
             int i = 0;
-                if (cj+j > -1 && cj+j < WIDTH) {
-                    int ai = ci+i;
-                    int aj = cj+j;
-                    if (!contains(to_visit, p_to_visit, to_pos(ai, aj)) && 
-                            !contains(visited, p_visited, to_pos(ai, aj))) {
-                        to_visit[p_to_visit++] = to_pos(ai, aj);
-                        map[ai*WIDTH*2 + aj*2 + 0] = ci;
-                        map[ai*WIDTH*2 + aj*2 + 1] = cj;
-                    }
+            int ai = ci+i;
+            int aj = cj+j;
+
+            char is_tail = 0;
+            for (int ti = 0; ti < tail_len; ti++) {
+                struct Position pos = tail[ti];
+                if (ai == pos.i && aj == pos.j) {
+                    is_tail = 1;
+                    break;
                 }
+            }
+
+            if (aj > -1 && aj < WIDTH && !is_tail) {
+                if (!contains(to_visit, p_to_visit, to_pos(ai, aj)) && 
+                        !contains(visited, p_visited, to_pos(ai, aj))) {
+                    to_visit[p_to_visit++] = to_pos(ai, aj);
+                    map[ai*WIDTH*2 + aj*2 + 0] = ci;
+                    map[ai*WIDTH*2 + aj*2 + 1] = cj;
+                }
+            }
         }
 
     }

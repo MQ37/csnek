@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <time.h>
 
 #define HEIGHT 20
 #define WIDTH 40
@@ -32,6 +33,11 @@ int fj;
 // Score
 int score = 0;
 
+void log_buff(char buff[128], FILE *file) {
+    fprintf(file, buff);
+    fflush(file);
+}
+
 void shift(struct Position *array, int len) {
     for (int i = len - 1; i > 0; i--) {
         array[i] = array[i - 1];
@@ -48,8 +54,8 @@ void gen_food() {
     char on_tail;
     do {
         on_tail = 0;
-        fi = 1 + (rand() % (HEIGHT-2));
-        fj = 1 + (rand() % (WIDTH-2));
+        fi = (rand() % (HEIGHT-1));
+        fj = (rand() % (WIDTH-1));
         for (int ti = 0; ti < tail_len; ti++) {
             struct Position pos = tail[ti];
             if (fi == pos.i && fj == pos.j) {
@@ -97,13 +103,10 @@ char step() {
         return -1;
     }
 
-    //if (!AI) {
-    if (1) {
-        for (int i = 1; i < tail_len; i++) {
-            struct Position pos = tail[i];
-            if (pi == pos.i && pj == pos.j)
-                return -1;
-        }
+    for (int i = 1; i < tail_len; i++) {
+        struct Position pos = tail[i];
+        if (pi == pos.i && pj == pos.j)
+            return -1;
     }
 
     shift(tail, tail_len);
@@ -112,24 +115,26 @@ char step() {
 
     char eaten = 0;
     if (pi == fi && pj == fj) {
+        if (tail_len > WIDTH*HEIGHT-2)
+            return 2;
         eaten = 1;
         score += 50;
         tail_len += 1;
         gen_food();
     }
 
+    if (eaten)
+        return 1;
+
     pi += vi;
     pj += vj;
 
-    if (eaten)
-        return 1;
 
     score += 1;
     return 0;
 }
 
 void turn_up() {
-    //if (vi > 0 && !AI)
     if (vi > 0)
         return;
     vi = -1;
@@ -137,7 +142,6 @@ void turn_up() {
 }
 
 void turn_down() {
-    //if (vi < 0 && !AI)
     if (vi < 0)
         return;
     vi = 1;
@@ -146,7 +150,6 @@ void turn_down() {
 }
 
 void turn_left() {
-    //if (vj > 0 && !AI)
     if (vj > 0)
         return;
     vi = 0;
@@ -154,7 +157,6 @@ void turn_left() {
 }
 
 void turn_right() {
-    //if (vj < 0 && !AI)
     if (vj < 0)
         return;
     vi = 0;
@@ -183,33 +185,29 @@ void print_pos_array(struct Position *array, int n) {
 }
 
 // finds path to food
-// TODO: fix segfault when close to border
-void find_path(struct Position *path, int *len) {
+char find_path(struct Position *path, int *len) {
     struct Position *to_visit = malloc(sizeof(struct Position) * (WIDTH) * (HEIGHT));
     int p_to_visit = 0;
-    int tp_to_visit = 0;
+
     struct Position *visited = malloc(sizeof(struct Position) * (WIDTH) * (HEIGHT));
     int p_visited = 0;
 
-    
     // [WIDTH*HEIGHT][2]
     int *map = malloc(sizeof(int) * 2 * WIDTH * HEIGHT);
-    for (int i = 0; i < 2*WIDTH*HEIGHT; i++) {
-        map[i] = -1;
-    }
 
     // entry point
     to_visit[p_to_visit++] = to_pos(pi, pj);
 
+    char found = 0;
     while(p_to_visit > 0) {
         int ci = to_visit[0].i;
         int cj = to_visit[0].j;
-        shift_left(to_visit, p_to_visit+1);
-        //shift_left(to_visit, p_to_visit);
+
+        // Shift
+        shift_left(to_visit, p_to_visit);
         p_to_visit--;
 
         // add to visited
-        //if (!contains(visited, p_visited, to_pos(ci, cj)))
         visited[p_visited++] = to_pos(ci, cj);
 
         // get positions around
@@ -233,6 +231,11 @@ void find_path(struct Position *path, int *len) {
                     to_visit[p_to_visit++] = to_pos(ai, aj);
                     map[ai*WIDTH*2 + aj*2 + 0] = ci;
                     map[ai*WIDTH*2 + aj*2 + 1] = cj;
+
+                    if (ai == fi && aj == fj) {
+                        found = 1;
+                        break;
+                    }
                 }
             }
         }
@@ -256,13 +259,18 @@ void find_path(struct Position *path, int *len) {
                     to_visit[p_to_visit++] = to_pos(ai, aj);
                     map[ai*WIDTH*2 + aj*2 + 0] = ci;
                     map[ai*WIDTH*2 + aj*2 + 1] = cj;
+
+                    if (ai == fi && aj == fj) {
+                        found = 1;
+                        break;
+                    }
                 }
             }
         }
 
     }
 
-    //if (ci == fi && cj == fj) {
+    if (found) {
         *len = 0;
         int prev_i = map[fi*WIDTH*2 + fj*2 + 0];
         int prev_j = map[fi*WIDTH*2 + fj*2 + 1];
@@ -279,13 +287,18 @@ void find_path(struct Position *path, int *len) {
             prev_i = map[temp_i*WIDTH*2 + temp_j*2 + 0];
             prev_j = map[temp_i*WIDTH*2 + temp_j*2 + 1];
         }
+    }
 
-    //}
 
     // Cleaning
     free(to_visit);
     free(visited);
     free(map);
+
+    if (!found)
+        return 0;
+    else
+        return 1;
 }
 
 char rel_pos_to_key(struct Position pos) {
@@ -309,6 +322,11 @@ char rel_pos_to_key(struct Position pos) {
 }
 
 int main(int argc, char *argv[]) {
+    srand(time(NULL));
+
+    // Log file
+    //FILE *log_file = fopen("game_log.txt", "a");
+
     // Ncurses INIT
     initscr();
     cbreak();
@@ -323,35 +341,33 @@ int main(int argc, char *argv[]) {
     char is_holding = 0;
     char key;
     char res;
+    char found;
 
     char playing = 1;
 
-        struct Position *path = malloc(sizeof(struct Position) * WIDTH * HEIGHT);
-        int *len_path = malloc(sizeof(int));
-        find_path(path, len_path);
+    struct Position *path = malloc(sizeof(struct Position) * WIDTH * HEIGHT);
+    int *len_path = malloc(sizeof(int));
+
+    found = find_path(path, len_path);
     while (playing) {
         clear();
         print_game();
 
-
-
-        //move(25, 0);
-        //print_pos_array(path, *len_path+1);
+        // Try to find path to food again
+        if (!found) {
+            found = find_path(path, len_path);
+        }
 
         if (AI) {
-            *len_path -= 1;
-            key = rel_pos_to_key(path[*len_path]);
+            if (found) {
+                *len_path -= 1;
+                key = rel_pos_to_key(path[*len_path]);
+            } else {
+                key = ERR;
+            }
         } else {
             key = getch();
         }
-
-        //printw("PI: %d PJ: %d\n", pi, pj);
-        //printw("TO POS I: %d J: %d\n", path[*len_path].i, path[*len_path].j);
-        //printw("KEY: %d\n", key);
-        //nodelay(stdscr, FALSE);
-        //getch();
-        //nodelay(stdscr, TRUE);
-        
 
         if (key != ERR && is_holding < 3) {
             if (!AI) {
@@ -374,15 +390,17 @@ int main(int argc, char *argv[]) {
             else if (key == 100) {
                 turn_right();
             }
-            usleep(1000000/FPS);
         } else {
             is_holding = 0;
-            usleep(1000000/FPS);
         }
 
         res = step();
 
         if (res == -1) {
+            //char buff[128];
+            //sprintf(buff, "LOST AT PI: %d, PJ: %d\n", pi, pj);
+            //log_buff(buff, log_file);
+
             clear();
             printw("YOU LOST WITH SCORE %d\nPRESS ANY KEY TO EXIT", score);
             refresh();
@@ -391,16 +409,32 @@ int main(int argc, char *argv[]) {
             playing = 0;
             break;
         } else if (res == 1) {
-            find_path(path, len_path);
+            //char buff[128];
+            //sprintf(buff, "EATEN AT PI: %d, PJ: %d NEXT AT FI: %d FJ: %d\n", pi, pj, fi, fj);
+            //log_buff(buff, log_file);
+
+            found = find_path(path, len_path);
+
+            //sprintf(buff, "COMPUTED PATH FOUND: %d\n", found);
+            //log_buff(buff, log_file);
+        } else if (res == 2) {
+            clear();
+            printw("YOU WON WITH SCORE %d\nPRESS ANY KEY TO EXIT", score);
+            refresh();
+            nodelay(stdscr, FALSE);
+            getch();
+            playing = 0;
+            break;
         }
 
         refresh();
-        // Cleaning
+        usleep(1000000/FPS);
     }
 
-        free(path);
-        free(len_path);
     // Cleaning
+    //fclose(log_file);
+    free(path);
+    free(len_path);
     free(tail);
     endwin();
     return 0;

@@ -50,6 +50,12 @@ void shift_left(struct Position *array, int len) {
     }
 }
 
+void shift_left_int(int *array, int len) {
+    for (int i = 0; i < len-1; i++) {
+        array[i] = array[i + 1];
+    }
+}
+
 void gen_food() {
     char on_tail;
     do {
@@ -109,7 +115,7 @@ char step() {
             return -1;
     }
 
-    shift(tail, tail_len);
+    shift(tail, tail_len+1);
     struct Position pos = {pi, pj};
     tail[0] = pos;
 
@@ -189,6 +195,8 @@ char find_path(struct Position *path, int *len) {
     struct Position *to_visit = malloc(sizeof(struct Position) * (WIDTH) * (HEIGHT));
     int p_to_visit = 0;
 
+    int *to_visit_depth = malloc(sizeof(int) * (WIDTH) * (HEIGHT));
+
     struct Position *visited = malloc(sizeof(struct Position) * (WIDTH) * (HEIGHT));
     int p_visited = 0;
 
@@ -197,18 +205,22 @@ char find_path(struct Position *path, int *len) {
 
     // entry point
     to_visit[p_to_visit++] = to_pos(pi, pj);
+    to_visit_depth[p_to_visit-1] = 0;
 
     char found = 0;
     while(p_to_visit > 0) {
         int ci = to_visit[0].i;
         int cj = to_visit[0].j;
+        int depth = to_visit_depth[0];
 
         // Shift
         shift_left(to_visit, p_to_visit);
+        shift_left_int(to_visit_depth, p_to_visit);
         p_to_visit--;
 
         // add to visited
         visited[p_visited++] = to_pos(ci, cj);
+
 
         // get positions around
         for (int i = -1; i < 2; i+=2) {
@@ -216,8 +228,12 @@ char find_path(struct Position *path, int *len) {
             int ai = ci+i;
             int aj = cj+j;
 
+            if (ai < 0 || ai > HEIGHT - 1)
+                continue;
+
             char is_tail = 0;
-            for (int ti = 0; ti < tail_len; ti++) {
+            //for (int ti = 0; ti < tail_len; ti++) {
+            for (int ti = 0; ti < tail_len-depth; ti++) {
                 struct Position pos = tail[ti];
                 if (ai == pos.i && aj == pos.j) {
                     is_tail = 1;
@@ -225,10 +241,11 @@ char find_path(struct Position *path, int *len) {
                 }
             }
 
-            if (ai > -1 && ai < HEIGHT && !is_tail) {
+            if (!is_tail) {
                 if (!contains(to_visit, p_to_visit, to_pos(ai, aj)) && 
                         !contains(visited, p_visited, to_pos(ai, aj))) {
                     to_visit[p_to_visit++] = to_pos(ai, aj);
+                    to_visit_depth[p_to_visit-1] = depth+1;
                     map[ai*WIDTH*2 + aj*2 + 0] = ci;
                     map[ai*WIDTH*2 + aj*2 + 1] = cj;
 
@@ -244,8 +261,12 @@ char find_path(struct Position *path, int *len) {
             int ai = ci+i;
             int aj = cj+j;
 
+            if (aj < 0 || aj > WIDTH - 1)
+                continue;
+
             char is_tail = 0;
-            for (int ti = 0; ti < tail_len; ti++) {
+            //for (int ti = 0; ti < tail_len; ti++) {
+            for (int ti = 0; ti < tail_len-depth; ti++) {
                 struct Position pos = tail[ti];
                 if (ai == pos.i && aj == pos.j) {
                     is_tail = 1;
@@ -253,10 +274,11 @@ char find_path(struct Position *path, int *len) {
                 }
             }
 
-            if (aj > -1 && aj < WIDTH && !is_tail) {
+            if (!is_tail) {
                 if (!contains(to_visit, p_to_visit, to_pos(ai, aj)) && 
                         !contains(visited, p_visited, to_pos(ai, aj))) {
                     to_visit[p_to_visit++] = to_pos(ai, aj);
+                    to_visit_depth[p_to_visit-1] = depth+1;
                     map[ai*WIDTH*2 + aj*2 + 0] = ci;
                     map[ai*WIDTH*2 + aj*2 + 1] = cj;
 
@@ -291,6 +313,7 @@ char find_path(struct Position *path, int *len) {
 
 
     // Cleaning
+    free(to_visit_depth);
     free(to_visit);
     free(visited);
     free(map);
@@ -350,6 +373,7 @@ int main(int argc, char *argv[]) {
 
     found = find_path(path, len_path);
     while (playing) {
+
         clear();
         print_game();
 

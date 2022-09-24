@@ -105,10 +105,6 @@ void print_game() {
 }
 
 char step() {
-    if (pi < 0 || pj < 0 || pi > HEIGHT - 1 || pj > WIDTH - 1) {
-        return -1;
-    }
-
     for (int i = 1; i < tail_len; i++) {
         struct Position pos = tail[i];
         if (pi == pos.i && pj == pos.j)
@@ -135,6 +131,9 @@ char step() {
     pi += vi;
     pj += vj;
 
+    if (pi < 0 || pj < 0 || pi > HEIGHT - 1 || pj > WIDTH - 1) {
+        return -1;
+    }
 
     score += 1;
     return 0;
